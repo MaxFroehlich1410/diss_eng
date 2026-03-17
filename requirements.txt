@@ -1,0 +1,9 @@
+pinexq-client
+qiskit==2.3.0
+qiskit-aer==0.17.2
+jupyter
+scikit-learn
+pandas
+httpx
+pyarrow
+matplotlib

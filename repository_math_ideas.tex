@@ -1,0 +1,497 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{bm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{xcolor}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!50!black,
+  urlcolor=blue!50!black,
+  citecolor=blue!50!black
+}
+
+\title{Mathematical Ideas Tested in the \texttt{Diss\_eng} Repository}
+\author{Repository analysis document}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This repository is not a single monolithic codebase; it is a small research workspace built around one central theme: how well approximate quantum state preparation can be improved, analyzed, or structured by mathematically designed dissipative dynamics and by target-aware state-loading methods. The main mathematical content appears in two experiment families. The first, \path{diss_lindblad_tail/}, studies density-matrix evolution under Lindblad master equations after a truncated state-preparation circuit. The second, \path{experiments/hydrogen_qalchemy/}, constructs hydrogenic wavefunctions on a discretized spatial grid, maps them to quantum statevectors, prepares them through Q-Alchemy-generated circuits, and then studies both ideal and hardware-constrained dissipative tails. A third component, \path{q-alchemy-sdk-py/}, is mostly infrastructural, but it reflects the mathematics of approximate quantum state preparation, tensor-inspired initialization methods, and fidelity-constrained circuit synthesis. This document explains the mathematical structures actually exercised in the repository and the kinds of hypotheses the code is testing.
+\end{abstract}
+
+\section{Repository-Level Research Question}
+At a high level, the repository tests variants of the following question:
+\begin{quote}
+Given a target pure quantum state $\lvert \psi_\star\rangle$, and given either an approximate state-preparation circuit or a restricted hardware model, can one design dissipative dynamics that provably or empirically increase fidelity to $\lvert \psi_\star\rangle$ while preserving physicality of the quantum state?
+\end{quote}
+
+That question is explored in two progressively richer settings:
+\begin{enumerate}[label=\arabic*.]
+  \item An \emph{exact} open-system simulation setting, where the dissipative dynamics are represented by a full Liouvillian superoperator and evolved deterministically in density-matrix form.
+  \item A \emph{large-scale and hardware-constrained} setting, where the target state is a discretized hydrogenic wavefunction and the dissipative tail is approximated by local Kraus channels, edge channels, and ancilla-reset gadgets.
+\end{enumerate}
+
+The relevant modules are concentrated in:
+\begin{itemize}
+  \item \path{diss_lindblad_tail/diss_lindblad/}
+  \item \path{experiments/hydrogen_qalchemy/}
+  \item \path{experiments/hydrogen_qalchemy/tail/}
+\end{itemize}
+
+\section{Core Mathematical Objects}
+Across the repository, the same mathematical objects reappear.
+
+\subsection{Pure states and density matrices}
+The basic target is a normalized statevector
+\[
+\lvert \psi \rangle \in \mathbb{C}^{2^n},
+\qquad
+\langle \psi \mid \psi \rangle = 1.
+\]
+Pure states are embedded into density-matrix language by
+\[
+\rho = \lvert \psi \rangle \langle \psi \rvert.
+\]
+This appears explicitly in \path{diss_lindblad_tail/diss_lindblad/density_matrix.py} and \path{experiments/hydrogen_qalchemy/tail/metrics.py}.
+
+The repository repeatedly tests whether an evolution rule preserves the defining conditions of a physical density matrix:
+\begin{align*}
+\rho &= \rho^\dagger, \\
+\operatorname{Tr}(\rho) &= 1, \\
+\rho &\succeq 0.
+\end{align*}
+These are not only assumed; they are checked in the test suites.
+
+\subsection{Target fidelity}
+The main scalar performance metric is fidelity to a pure target:
+\[
+F(\rho,\psi_\star) = \langle \psi_\star \rvert \rho \lvert \psi_\star \rangle.
+\]
+This is the principal observable in both experiment families. The repository studies whether fidelity:
+\begin{itemize}
+  \item increases after adding a dissipative tail,
+  \item follows a known analytic law,
+  \item remains monotone under an ideal cooling channel,
+  \item can be approximated by constrained channels fitted to a teacher model.
+\end{itemize}
+
+\subsection{Quantum channels, CPTP maps, and Lindblad generators}
+The code alternates between two equivalent open-system descriptions:
+\begin{enumerate}[label=\alph*.]
+  \item continuous-time Lindblad evolution,
+  \item discrete completely positive trace-preserving (CPTP) maps in Kraus form.
+\end{enumerate}
+
+The Lindblad master equation implemented in \path{diss_lindblad_tail/diss_lindblad/lindblad.py} is
+\[
+\frac{d\rho}{dt}
+= -i[H,\rho] + \sum_k \gamma_k \mathcal{D}[L_k](\rho),
+\]
+where
+\[
+\mathcal{D}[L](\rho)
+= L\rho L^\dagger - \frac{1}{2}\{L^\dagger L,\rho\}.
+\]
+This is then vectorized into Liouville space and exponentiated as a matrix evolution problem.
+
+In the constrained-tail code, each short time step is instead implemented as a composition of local Kraus maps. The mathematical question there is whether an expressive enough family of physically realizable CPTP maps can mimic a desired global dissipative flow.
+
+\subsection{State-preparation unitaries}
+Another recurring idea is the extension of a target state to a full unitary:
+\[
+U \lvert 0\cdots 0\rangle = \lvert \psi_\star \rangle.
+\]
+In \path{diss_lindblad_tail/diss_lindblad/circuits.py}, the first column of a unitary is chosen to be $\psi_\star$, and the remaining columns are completed by an orthonormal basis from a null-space computation. The exact circuit is then decomposed into elementary gates and deliberately truncated. This means the repository is testing not only dissipative dynamics, but the interaction between:
+\begin{itemize}
+  \item exact state preparation,
+  \item shallow or incomplete approximation,
+  \item post-circuit dissipative correction.
+\end{itemize}
+
+\section{Mathematical Ideas in \texttt{diss\_lindblad\_tail/}}
+
+\subsection{Approximate state preparation followed by a dissipative tail}
+The package \path{diss_lindblad_tail/} implements a clean mathematical pipeline:
+\begin{enumerate}[label=\arabic*.]
+  \item choose a target state $\lvert \psi_\star\rangle$,
+  \item build an exact preparation circuit,
+  \item truncate the circuit to a gate fraction,
+  \item convert the resulting approximate output into a density matrix $\rho_0$,
+  \item evolve $\rho_0$ under a chosen dissipative model,
+  \item record fidelity, trace, and purity as functions of time.
+\end{enumerate}
+
+This is primarily orchestrated in \path{diss_lindblad_tail/diss_lindblad/experiment.py}.
+
+\subsection{Liouville-space superoperator methods}
+The mathematically most explicit part of the repository is the Liouville-space representation in \path{diss_lindblad_tail/diss_lindblad/lindblad.py}. If $\mathrm{vec}$ denotes column-stacking vectorization, then the code uses
+\[
+\frac{d}{dt}\lvert \rho \rangle\!\rangle
+= \mathcal{L}\,\lvert \rho \rangle\!\rangle,
+\]
+with
+\[
+\mathcal{L}
+= -i(I\otimes H - H^T\otimes I)
+ + \sum_k \gamma_k
+\left(
+\overline{L_k}\otimes L_k
+- \frac{1}{2}I\otimes L_k^\dagger L_k
+- \frac{1}{2}(L_k^\dagger L_k)^T\otimes I
+\right).
+\]
+This is a concrete test of superoperator calculus, vectorization identities, and deterministic density-matrix propagation via $\exp(\mathcal{L}t)$.
+
+\subsection{Canonical channels that are compared}
+Three dissipative channel families are implemented and contrasted:
+\begin{enumerate}[label=\alph*.]
+  \item \textbf{Target cooling:}
+  \[
+  L_k = \lvert \psi_\star\rangle \langle \psi_k^\perp \rvert,
+  \]
+  where $\{\psi_k^\perp\}$ spans the orthogonal complement of the target.
+  \item \textbf{Amplitude damping:}
+  local $\sigma^- = \lvert 0\rangle\langle 1\rvert$ operators on each qubit.
+  \item \textbf{Dephasing:}
+  local $Z$ operators on each qubit.
+\end{enumerate}
+
+These are not merely implemented as textbook examples. They serve different mathematical purposes:
+\begin{itemize}
+  \item target cooling is the \emph{idealized teacher} channel that guarantees convergence to the target;
+  \item amplitude damping and dephasing are standard physical baselines not aligned to an arbitrary target;
+  \item the comparison asks how much of the target-directed behavior is special to global knowledge of $\psi_\star$.
+\end{itemize}
+
+\subsection{Named target states and entanglement structure}
+The code explicitly generates:
+\begin{itemize}
+  \item Haar-random states,
+  \item GHZ states,
+  \item $W$ states.
+\end{itemize}
+This matters mathematically because those states probe different entanglement structures. The repository is therefore testing whether dissipative correction behaves similarly for:
+\begin{itemize}
+  \item generic states,
+  \item highly nonlocal cat-like states,
+  \item distributed single-excitation states.
+\end{itemize}
+
+\subsection{What the tests verify}
+The test file \path{diss_lindblad_tail/tests/test_sanity.py} shows what the author regards as the important mathematical invariants:
+\begin{itemize}
+  \item pure-state density matrices are valid,
+  \item unitary channels preserve purity,
+  \item zero dissipation leaves the state unchanged,
+  \item Lindblad evolution preserves trace,
+  \item evolved states remain positive semidefinite,
+  \item target cooling converges to the target,
+  \item the full untruncated circuit reproduces the target state,
+  \item incremental evolution agrees with direct exponentiation.
+\end{itemize}
+So the package is not only simulating open quantum dynamics; it is also testing numerical faithfulness to the mathematical theory of CPTP semigroups.
+
+\section{Mathematical Ideas in \texttt{experiments/hydrogen\_qalchemy/}}
+
+\subsection{Hydrogenic eigenfunctions as quantum data}
+The file \path{experiments/hydrogen_qalchemy/hydrogen_wavefunction.py} introduces a different mathematical domain: the bound-state wavefunctions of the Schr\"odinger hydrogen atom.
+
+The state is modeled in the standard separated form
+\[
+\psi_{n\ell m}(r,\theta,\phi) = R_{n\ell}(r)Y_{\ell m}(\theta,\phi),
+\]
+where:
+\begin{itemize}
+  \item $R_{n\ell}$ is built from generalized Laguerre polynomials and a stable normalization formula using log-gamma functions,
+  \item $Y_{\ell m}$ is the spherical harmonic,
+  \item the reduced electron-nucleus mass and reduced Bohr radius are included.
+\end{itemize}
+
+This means the repository tests more than abstract random states. It tests physically structured wavefunctions with nodal surfaces, angular momentum labels $(n,\ell,m)$, and analytically known radial-angular factorization.
+
+\subsection{Discretization and embedding into a qubit statevector}
+The hydrogen wavefunction is sampled on an $x$-$z$ slice with $y=0$, on a square grid whose side length is
+\[
+2^{n_q/2},
+\]
+where $n_q$ is the number of qubits and must be even. The sampled complex amplitudes are flattened and normalized into a quantum statevector. This tests the mathematics of:
+\begin{itemize}
+  \item spatial discretization of a continuous wavefunction,
+  \item amplitude encoding of classical scientific data into a quantum state,
+  \item compatibility between physical wavefunctions and qubit register dimensions.
+\end{itemize}
+
+\subsection{Approximate state preparation through Q-Alchemy}
+The script \path{experiments/hydrogen_qalchemy/run_hydrogen_qalchemy.py} sends the target statevector to Q-Alchemy and compiles a preparation circuit. The repository then measures fidelity after each gate in the compiled circuit.
+
+The mathematical idea under test here is:
+\begin{quote}
+How does an approximate, compiled state-preparation circuit accumulate fidelity to a structured target state as its gate sequence unfolds?
+\end{quote}
+
+The code therefore treats the circuit not just as a black box but as a trajectory in state space. It records:
+\begin{itemize}
+  \item gate-by-gate fidelity values,
+  \item final circuit fidelity,
+  \item monotonicity ratios for candidate hydrogen targets.
+\end{itemize}
+
+This leads to a secondary search problem: some hydrogenic targets may produce more monotone or better-behaved compiled fidelity curves than others.
+
+\subsection{The search over quantum numbers}
+The function \path{search_monotonic_targets} loops over admissible $(n,\ell,m)$ and filters states by:
+\begin{itemize}
+  \item minimum final fidelity,
+  \item minimum fraction of non-decreasing gate steps.
+\end{itemize}
+Mathematically, this is a search over a discrete family of physically meaningful basis states to find states whose compiled preparation trajectories are particularly regular.
+
+\section{Exact Target-Cooling Mathematics}
+
+\subsection{Teacher channel with an analytic fidelity law}
+The most elegant mathematical construction in the repository is the exact target-cooling channel in \path{experiments/hydrogen_qalchemy/tail/target_cooling.py}. It uses jump operators
+\[
+L_k = \sqrt{\gamma}\,\lvert \psi_\star\rangle \langle \psi_k^\perp\rvert,
+\qquad k=1,\dots,d-1,
+\]
+so that the target projector
+\[
+P = \lvert \psi_\star\rangle \langle \psi_\star\rvert
+\]
+is the unique steady state.
+
+The code exploits a block decomposition relative to $P$ and $P_\perp = I-P$, which yields an exact closed-form evolution law. In particular, if
+\[
+F_0 = \langle \psi_\star \rvert \rho_0 \lvert \psi_\star \rangle,
+\]
+then
+\[
+F(t) = 1 - (1-F_0)e^{-\gamma t}.
+\]
+
+This is important for the whole repository because it provides:
+\begin{itemize}
+  \item an analytically controlled teacher process,
+  \item a monotone target-directed benchmark,
+  \item a way to scale to dimensions where a full $d^2\times d^2$ Liouvillian would be infeasible.
+\end{itemize}
+
+\subsection{Algorithmic complexity as part of the mathematics}
+The code is explicit that a naive Liouvillian is impossible for $d=1024$ and beyond. Instead, the teacher tail is implemented using rank-structured updates and matrix-vector products in $O(d^2)$ time per step. Thus the repository is also testing a mathematical-algorithmic idea:
+\begin{quote}
+Exploit problem-specific structure of the dissipator instead of treating the open-system evolution as a generic superoperator.
+\end{quote}
+
+\subsection{Verified properties}
+The target-cooling acceptance tests in \path{experiments/hydrogen_qalchemy/tail/tests.py} confirm the intended mathematics:
+\begin{itemize}
+  \item the target state is a fixed point,
+  \item trace is preserved,
+  \item the analytic fidelity law is exact,
+  \item fidelity is monotone non-decreasing,
+  \item long-time evolution converges to fidelity $1$.
+\end{itemize}
+
+\section{Hardware-Constrained Dissipation as an Approximation Problem}
+
+\subsection{From ideal global jumps to realizable local channels}
+The file \path{experiments/hydrogen_qalchemy/tail/constraint_dissipation.py} asks the key practical question of the repository:
+\begin{quote}
+If the ideal target-cooling jump operators are globally nonlocal and unrealistic, what family of physically local or near-local CPTP maps can approximate their effect?
+\end{quote}
+
+This is formulated as a model class, \texttt{ConstraintDissipation}, parameterized by rates and optional unitary angles. The mathematical idea is not a single channel, but a \emph{model family} of dissipative dynamics with tunable expressive power.
+
+\subsection{Local channel basis}
+The constrained model includes several elementary channels.
+
+\paragraph{Single-qubit channels.}
+For each qubit, the repository can include:
+\begin{itemize}
+  \item amplitude damping,
+  \item dephasing,
+  \item depolarizing noise.
+\end{itemize}
+
+\paragraph{Two-qubit edge channels.}
+On each allowed edge of a connectivity graph, it can include:
+\begin{itemize}
+  \item correlated $ZZ$ dephasing,
+  \item Bell-state pumping toward $\lvert \Phi^+\rangle$ or $\lvert \Psi^-\rangle$,
+  \item parity pumping in the $ZZ$ or $XX$ basis,
+  \item collective decay with jump operator proportional to
+  \[
+  \sigma^-_i \pm \sigma^-_j.
+  \]
+\end{itemize}
+
+\paragraph{Ancilla-reset gadgets.}
+The code also includes one- and two-qubit ancilla-reset channels obtained by:
+\begin{enumerate}[label=\alph*.]
+  \item coupling system qubits to a fresh ancilla by a parameterized unitary,
+  \item tracing or resetting the ancilla,
+  \item interpreting the resulting reduced map as a programmable dissipative primitive.
+\end{enumerate}
+
+This is mathematically significant because ancilla-reset gadgets leave the pure Lindblad-generator picture and move into a broader class of discrete CPTP maps.
+
+\subsection{Graph topology as a mathematical constraint}
+The class \texttt{ConstraintConfig} allows several connectivity modes:
+\begin{itemize}
+  \item chain,
+  \item custom graph,
+  \item all-to-all.
+\end{itemize}
+Therefore one of the ideas tested in the repository is how geometry limits dissipative control. The difference between chain and all-to-all is not cosmetic; it changes the space of admissible edge channels and therefore the approximation power of the constrained model.
+
+\subsection{Trotterized dissipative composition}
+The constrained step is applied as a first-order Trotter composition of exact local CPTP maps. This tests whether a sequence of individually valid local channels can act as a useful approximation to a desired global semigroup. In other words, the repository studies a synthesis problem for open-system dynamics:
+\[
+\mathcal{E}_{\Delta t}
+\approx
+\mathcal{E}^{(m)}_{\Delta t}\circ\cdots\circ \mathcal{E}^{(2)}_{\Delta t}\circ \mathcal{E}^{(1)}_{\Delta t}.
+\]
+
+\subsection{Kraus-efficient tensor reshaping}
+The code applies local channels without constructing full lifted Kraus operators on the entire Hilbert space. Instead, it reshapes $\rho$ into a tensor and contracts only the active indices. This is algorithmically important and mathematically aligned with tensor-network thinking: locality in the channel is translated into low-overhead tensor contractions.
+
+\section{Optimization Problems Tested in the Repository}
+
+\subsection{Teacher-supervised fitting}
+The file \path{experiments/hydrogen_qalchemy/tail/fit_constraint_to_target.py} formulates the constrained-tail design problem as supervised approximation to the teacher trajectory.
+
+Two losses are implemented:
+\begin{align*}
+\mathcal{L}_{\mathrm{Frob}}
+&=
+\frac{1}{SJ}\sum_{s,j}
+\left\lVert
+\rho^{\mathrm{model}}_{s}(t_j)
+- \rho^{\mathrm{teacher}}_{s}(t_j)
+\right\rVert_F^2, \\
+\mathcal{L}_{\mathrm{fid}}
+&=
+\frac{1}{SJ}\sum_{s,j}
+\left(
+F^{\mathrm{model}}_{s}(t_j)
+- F^{\mathrm{teacher}}_{s}(t_j)
+\right)^2.
+\end{align*}
+
+This means the repository is testing at least two mathematically distinct notions of approximation:
+\begin{itemize}
+  \item match the full density-matrix trajectory,
+  \item match only the target-fidelity curve.
+\end{itemize}
+
+\subsection{Direct-to-target optimization}
+The file \path{experiments/hydrogen_qalchemy/tail/fit_constraint_direct_to_target.py} removes the teacher and directly optimizes for high target fidelity. Two objective styles appear:
+\begin{itemize}
+  \item terminal-fidelity loss,
+  \item weighted curve loss over the whole dissipative trajectory.
+\end{itemize}
+
+So the repository is explicitly comparing two philosophies:
+\begin{enumerate}[label=\alph*.]
+  \item imitate an analytically ideal channel,
+  \item optimize directly for the end task.
+\end{enumerate}
+
+\subsection{Parameterization and bounded rates}
+Rate parameters are bounded in $[0,\gamma_{\max}]$ using sigmoid or clipping logic, while ancilla-unitary parameters are left unbounded. This is a standard but meaningful mathematical design choice: it separates physically interpretable dissipation strengths from more expressive control angles.
+
+\subsection{Training distributions over states}
+The fitting routines do not train on only one input state. They generate mixed training sets including:
+\begin{itemize}
+  \item the actual circuit output state,
+  \item the target state,
+  \item random pure states,
+  \item computational basis states,
+  \item random mixed states.
+\end{itemize}
+This reveals another tested idea: whether a constrained dissipative model can generalize as an \emph{operator family}, not merely overfit one initial density matrix.
+
+\section{Comparison Experiments and Hypotheses}
+The script \path{experiments/hydrogen_qalchemy/compare_tails.py} makes the intended scientific comparison very explicit. It compares:
+\begin{itemize}
+  \item the teacher tail,
+  \item the constrained fitted tail,
+  \item optionally a direct-to-target optimized constrained tail.
+\end{itemize}
+
+In effect, the repository is testing the following hypotheses.
+
+\subsection*{Hypothesis 1: dissipative post-processing can repair imperfect preparation}
+After a compiled state-preparation circuit outputs $\rho_0$, the repository asks whether a dissipative tail can increase
+\[
+\langle \psi_\star \rvert \rho_0 \lvert \psi_\star \rangle.
+\]
+
+\subsection*{Hypothesis 2: the ideal teacher channel has analytically controlled monotone behavior}
+The code checks this directly through the formula
+\[
+F(t)=1-(1-F_0)e^{-\gamma t}.
+\]
+
+\subsection*{Hypothesis 3: constrained local channels can approximate the teacher nontrivially}
+This is the main approximation problem. The code asks how much of the teacher advantage survives once one restricts to local noise, edge channels, and geometry.
+
+\subsection*{Hypothesis 4: ancilla-reset channels add expressive power}
+The presence of \path{experiments/hydrogen_qalchemy/tail/example_edge_ancilla_reset.py} indicates an explicit test that edge ancilla-reset primitives can outperform a do-nothing baseline and possibly close some of the gap to the teacher.
+
+\section{What Role the Q-Alchemy SDK Plays}
+The directory \path{q-alchemy-sdk-py/} is mostly not where the new mathematics of this repository lives. Its main role is enabling state preparation through a remote synthesis service. Still, it embodies a few mathematical ideas that matter for interpreting the experiments:
+\begin{itemize}
+  \item quantum state preparation as an optimization or decomposition problem,
+  \item approximate loading with a user-specified fidelity-loss tolerance,
+  \item method choices such as hierarchical Tucker, iterative Tucker, swap-pivot, and low-rank variants,
+  \item examples based on Schmidt compression and tensor-structured data handling.
+\end{itemize}
+
+The most relevant point is that the repository treats state preparation as \emph{approximate and structured}, not exact by default. That assumption is what makes the dissipative-tail experiments meaningful.
+
+\section{Most Important Mathematical Themes, Summarized}
+The mathematical ideas tested in this repository can be summarized as follows.
+
+\subsection*{1. Open-system control toward a known pure target}
+The repository repeatedly studies target-aware dissipation that attempts to steer an arbitrary or imperfect state toward a specified $\lvert \psi_\star\rangle$.
+
+\subsection*{2. Exact Lindblad theory versus realizable CPTP approximations}
+One part of the code uses exact Liouvillian evolution; another replaces it with local Kraus maps and ancilla-reset constructions. The tension between those two descriptions is central.
+
+\subsection*{3. Structured quantum data from physics}
+Hydrogenic eigenfunctions give the repository a scientifically structured family of target states rather than only random vectors.
+
+\subsection*{4. Approximate state preparation as a precursor error model}
+The code assumes state preparation is imperfect, either because a circuit is truncated or because Q-Alchemy returns an approximate compilation. Dissipation is then studied as a repair mechanism.
+
+\subsection*{5. Optimization over channel families}
+The constrained-tail code is effectively learning a dissipative channel family under locality, topology, and bounded-rate constraints.
+
+\subsection*{6. Provable analytic behavior where possible}
+The exact target-cooling channel is attractive in this repository precisely because its fidelity law and steady state are analytically controlled.
+
+\section{Conclusion}
+The repository tests a coherent mathematical program: use state-preparation circuits to get close to a target state, then use engineered dissipation to move closer. Its most substantive mathematical contributions are the combination of:
+\begin{itemize}
+  \item Liouville-space Lindblad simulation,
+  \item exact target-cooling channels with closed-form fidelity dynamics,
+  \item constrained dissipative models built from local and edge CPTP primitives,
+  \item optimization-based matching of realizable dissipative tails to ideal target-directed behavior,
+  \item physically structured target states derived from hydrogenic wavefunctions.
+\end{itemize}
+
+In short, this repository is testing the mathematics of \emph{dissipative correction of approximate quantum state preparation}, with increasing realism from exact global models to topology-limited, hardware-motivated channel families.
+
+\end{document}

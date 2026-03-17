@@ -1,0 +1,19 @@
+.DS_Store
+.venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Local download/cache directories
+_tmp_qalchemy_download/
+
+# Generated LaTeX build outputs
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+
+# Nested external repository
+q-alchemy-sdk-py/
