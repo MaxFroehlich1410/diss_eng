@@ -1,0 +1,29 @@
+{
+  "cooling": {
+    "n_ops": 15,
+    "final_fidelity": 0.9987645389616544,
+    "n_iterations": 80,
+    "spectral_gap": 0.14999999999999994,
+    "ss_fidelity": 0.9999997323354688,
+    "is_unique_ss": true,
+    "time_s": 429.90029096603394
+  },
+  "physical": {
+    "n_ops": 21,
+    "final_fidelity": 0.4999999999999999,
+    "n_iterations": 120,
+    "spectral_gap": 0.28980535786457484,
+    "ss_fidelity": 0.4999994907202046,
+    "is_unique_ss": false,
+    "time_s": 930.592169046402
+  },
+  "random": {
+    "n_ops": 20,
+    "final_fidelity": 0.10004198174044363,
+    "n_iterations": 120,
+    "spectral_gap": 2.7426348593747383,
+    "ss_fidelity": 0.0696487497520939,
+    "is_unique_ss": false,
+    "time_s": 1153.4378604888916
+  }
+}
