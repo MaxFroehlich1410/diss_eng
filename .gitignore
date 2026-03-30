@@ -15,5 +15,8 @@ _tmp_qalchemy_download/
 *.log
 *.out
 
+# API keys / secrets
+experiments/hydrogen_qalchemy/API_alchemy.md
+
 # Nested external repository
 q-alchemy-sdk-py/
