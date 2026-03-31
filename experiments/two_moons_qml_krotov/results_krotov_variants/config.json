@@ -1,0 +1,125 @@
+{
+  "n_samples": 500,
+  "moon_noise": 0.15,
+  "test_fraction": 0.3,
+  "n_qubits": 4,
+  "n_layers": 3,
+  "entangler": "ring",
+  "observable": "Z0Z1",
+  "max_iterations": 100,
+  "adam_lr": 0.05,
+  "lbfgs_maxiter": 100,
+  "krotov_step_size": 0.3,
+  "krotov_lr_schedule": "constant",
+  "krotov_decay": 0.05,
+  "krotov_batch_size": null,
+  "krotov_target_loss": 0.4,
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "optimizers": [
+    "krotov_online",
+    "krotov_batch"
+  ],
+  "run_krotov_batch_sweep": false,
+  "krotov_batch_sweep_step_sizes": [
+    1.0,
+    0.3,
+    0.1,
+    0.05,
+    0.02
+  ],
+  "krotov_batch_sweep_schedules": [
+    "constant",
+    "inverse"
+  ],
+  "loss_threshold": 0.4,
+  "results_dir": "results_krotov_variants",
+  "plots_dir": "plots_krotov_variants",
+  "experiment_specs": [
+    {
+      "run_name": "krotov_online",
+      "optimizer_name": "krotov_online",
+      "optimizer_family": "krotov_online",
+      "config_overrides": {
+        "krotov_step_size": 0.3,
+        "krotov_lr_schedule": "constant"
+      },
+      "is_sweep": false
+    },
+    {
+      "run_name": "krotov_batch",
+      "optimizer_name": "krotov_batch",
+      "optimizer_family": "krotov_batch",
+      "config_overrides": {
+        "krotov_step_size": 0.3,
+        "krotov_lr_schedule": "constant"
+      },
+      "is_sweep": false
+    },
+    {
+      "run_name": "krotov_batch_lr1.000_constant",
+      "optimizer_name": "krotov_batch",
+      "optimizer_family": "krotov_batch",
+      "config_overrides": {
+        "krotov_step_size": 1.0,
+        "krotov_lr_schedule": "constant"
+      },
+      "is_sweep": true
+    },
+    {
+      "run_name": "krotov_batch_lr0.100_constant",
+      "optimizer_name": "krotov_batch",
+      "optimizer_family": "krotov_batch",
+      "config_overrides": {
+        "krotov_step_size": 0.1,
+        "krotov_lr_schedule": "constant"
+      },
+      "is_sweep": true
+    },
+    {
+      "run_name": "krotov_batch_lr0.050_constant",
+      "optimizer_name": "krotov_batch",
+      "optimizer_family": "krotov_batch",
+      "config_overrides": {
+        "krotov_step_size": 0.05,
+        "krotov_lr_schedule": "constant"
+      },
+      "is_sweep": true
+    },
+    {
+      "run_name": "krotov_batch_lr0.020_constant",
+      "optimizer_name": "krotov_batch",
+      "optimizer_family": "krotov_batch",
+      "config_overrides": {
+        "krotov_step_size": 0.02,
+        "krotov_lr_schedule": "constant"
+      },
+      "is_sweep": true
+    },
+    {
+      "run_name": "krotov_batch_lr0.300_inverse",
+      "optimizer_name": "krotov_batch",
+      "optimizer_family": "krotov_batch",
+      "config_overrides": {
+        "krotov_step_size": 0.3,
+        "krotov_lr_schedule": "inverse"
+      },
+      "is_sweep": true
+    },
+    {
+      "run_name": "krotov_batch_lr1.000_inverse",
+      "optimizer_name": "krotov_batch",
+      "optimizer_family": "krotov_batch",
+      "config_overrides": {
+        "krotov_step_size": 1.0,
+        "krotov_lr_schedule": "inverse"
+      },
+      "is_sweep": true
+    }
+  ]
+}

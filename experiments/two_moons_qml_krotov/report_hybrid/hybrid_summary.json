@@ -1,0 +1,378 @@
+{
+  "best_hybrid_by_final_loss": "krotov_hybrid_sw010",
+  "best_hybrid_label": "Hybrid sw=10",
+  "fastest_hybrid_at_loss_threshold": "krotov_hybrid_sw005",
+  "fastest_hybrid_label": "Hybrid sw=5",
+  "comparison_threshold": 0.4,
+  "summary_by_optimizer": {
+    "adam": {
+      "n_runs": 5,
+      "final_loss_mean": 0.3545614673394142,
+      "final_loss_std": 0.040772484685515864,
+      "final_test_acc_mean": 0.868,
+      "final_test_acc_std": 0.024729649321321878,
+      "wall_time_mean": 67.38292193412781,
+      "wall_time_std": 3.7560901311799455,
+      "cost_mean": 155850.0,
+      "cost_std": 0.0,
+      "loss_step1_mean": 0.6837272709566294,
+      "loss_step10_mean": 0.534201026703986,
+      "tail_loss_std_mean": 0.0009157581173460424,
+      "tail_update_norm_mean": 0.029559683793177367,
+      "thresholds": {
+        "0.45": {
+          "success_rate": 1.0,
+          "step_mean": 22.6,
+          "time_mean": 16.64905982017517,
+          "cost_mean": 35880.0
+        },
+        "0.40": {
+          "success_rate": 0.8,
+          "step_mean": 37.0,
+          "time_mean": 26.572598218917847,
+          "cost_mean": 58200.0
+        },
+        "0.38": {
+          "success_rate": 0.8,
+          "step_mean": 43.5,
+          "time_mean": 30.91087645292282,
+          "cost_mean": 68275.0
+        },
+        "0.36": {
+          "success_rate": 0.6,
+          "step_mean": 42.666666666666664,
+          "time_mean": 28.40725000699361,
+          "cost_mean": 66983.33333333333
+        }
+      }
+    },
+    "krotov_batch": {
+      "n_runs": 5,
+      "final_loss_mean": 0.3649786403274443,
+      "final_loss_std": 0.0362499529778111,
+      "final_test_acc_mean": 0.852,
+      "final_test_acc_std": 0.01543444920372029,
+      "wall_time_mean": 65.00147223472595,
+      "wall_time_std": 0.9306104569120109,
+      "cost_mean": 155850.0,
+      "cost_std": 0.0,
+      "loss_step1_mean": 0.6776980969319393,
+      "loss_step10_mean": 0.5309589036628127,
+      "tail_loss_std_mean": 0.0023764685321044144,
+      "tail_update_norm_mean": 0.01637671798525118,
+      "thresholds": {
+        "0.45": {
+          "success_rate": 1.0,
+          "step_mean": 25.8,
+          "time_mean": 16.809643077850343,
+          "cost_mean": 40840.0
+        },
+        "0.40": {
+          "success_rate": 0.8,
+          "step_mean": 41.25,
+          "time_mean": 26.75941962003708,
+          "cost_mean": 64787.5
+        },
+        "0.38": {
+          "success_rate": 0.8,
+          "step_mean": 53.0,
+          "time_mean": 34.33931756019592,
+          "cost_mean": 83000.0
+        },
+        "0.36": {
+          "success_rate": 0.6,
+          "step_mean": 77.0,
+          "time_mean": 49.89424594243368,
+          "cost_mean": 120200.0
+        }
+      }
+    },
+    "krotov_hybrid": {
+      "n_runs": 5,
+      "final_loss_mean": 0.3458765294849043,
+      "final_loss_std": 0.014403967485413288,
+      "final_test_acc_mean": 0.8373333333333333,
+      "final_test_acc_std": 0.016110727964792754,
+      "wall_time_mean": 27.152226734161378,
+      "wall_time_std": 9.020798014743143,
+      "cost_mean": 53240.0,
+      "cost_std": 21863.243126306766,
+      "loss_step1_mean": 0.3816728588788375,
+      "loss_step10_mean": 0.3447084023599508,
+      "tail_loss_std_mean": 0.018260158145971008,
+      "tail_update_norm_mean": 1.0131869059707488,
+      "thresholds": {
+        "0.45": {
+          "success_rate": 1.0,
+          "step_mean": 1.0,
+          "time_mean": 0.9451016426086426,
+          "cost_mean": 2400.0
+        },
+        "0.40": {
+          "success_rate": 1.0,
+          "step_mean": 1.2,
+          "time_mean": 1.1331786155700683,
+          "cost_mean": 2710.0
+        },
+        "0.38": {
+          "success_rate": 1.0,
+          "step_mean": 1.4,
+          "time_mean": 1.3136713981628418,
+          "cost_mean": 3020.0
+        },
+        "0.36": {
+          "success_rate": 1.0,
+          "step_mean": 2.6,
+          "time_mean": 2.4213727951049804,
+          "cost_mean": 4880.0
+        }
+      }
+    },
+    "krotov_hybrid_sw005": {
+      "n_runs": 5,
+      "final_loss_mean": 0.3317427056348331,
+      "final_loss_std": 0.013361048343528558,
+      "final_test_acc_mean": 0.8426666666666668,
+      "final_test_acc_std": 0.02332380757938121,
+      "wall_time_mean": 48.12289719581604,
+      "wall_time_std": 18.283427982085186,
+      "cost_mean": 122060.0,
+      "cost_std": 46648.56267882216,
+      "loss_step1_mean": 0.3816728588788375,
+      "loss_step10_mean": 0.3364889592147833,
+      "tail_loss_std_mean": 0.00245104979211061,
+      "tail_update_norm_mean": 0.11825935290467418,
+      "thresholds": {
+        "0.45": {
+          "success_rate": 1.0,
+          "step_mean": 1.0,
+          "time_mean": 0.8968469142913819,
+          "cost_mean": 2400.0
+        },
+        "0.40": {
+          "success_rate": 1.0,
+          "step_mean": 1.2,
+          "time_mean": 1.058138942718506,
+          "cost_mean": 2710.0
+        },
+        "0.38": {
+          "success_rate": 1.0,
+          "step_mean": 1.4,
+          "time_mean": 1.2210381507873536,
+          "cost_mean": 3020.0
+        },
+        "0.36": {
+          "success_rate": 1.0,
+          "step_mean": 2.6,
+          "time_mean": 2.211077404022217,
+          "cost_mean": 4880.0
+        }
+      }
+    },
+    "krotov_hybrid_sw010": {
+      "n_runs": 5,
+      "final_loss_mean": 0.32927706592325295,
+      "final_loss_std": 0.011905750002193353,
+      "final_test_acc_mean": 0.8413333333333334,
+      "final_test_acc_std": 0.02286190426597633,
+      "wall_time_mean": 58.1809944152832,
+      "wall_time_std": 11.125068005041822,
+      "cost_mean": 141590.0,
+      "cost_std": 28520.0,
+      "loss_step1_mean": 0.3816728588788375,
+      "loss_step10_mean": 0.3447084023599508,
+      "tail_loss_std_mean": 0.0001010051356504761,
+      "tail_update_norm_mean": 0.00397427771279646,
+      "thresholds": {
+        "0.45": {
+          "success_rate": 1.0,
+          "step_mean": 1.0,
+          "time_mean": 0.9142471313476562,
+          "cost_mean": 2400.0
+        },
+        "0.40": {
+          "success_rate": 1.0,
+          "step_mean": 1.2,
+          "time_mean": 1.0905823230743408,
+          "cost_mean": 2710.0
+        },
+        "0.38": {
+          "success_rate": 1.0,
+          "step_mean": 1.4,
+          "time_mean": 1.266776943206787,
+          "cost_mean": 3020.0
+        },
+        "0.36": {
+          "success_rate": 1.0,
+          "step_mean": 2.6,
+          "time_mean": 2.3205663204193114,
+          "cost_mean": 4880.0
+        }
+      }
+    },
+    "krotov_hybrid_sw030": {
+      "n_runs": 5,
+      "final_loss_mean": 0.3540733809134481,
+      "final_loss_std": 0.01144956101385581,
+      "final_test_acc_mean": 0.8386666666666667,
+      "final_test_acc_std": 0.012220201853215599,
+      "wall_time_mean": 21.280214405059816,
+      "wall_time_std": 2.371621992343012,
+      "cost_mean": 38360.0,
+      "cost_std": 4205.044589537666,
+      "loss_step1_mean": 0.3816728588788375,
+      "loss_step10_mean": 0.3447084023599508,
+      "tail_loss_std_mean": 0.03410352421528946,
+      "tail_update_norm_mean": 1.8826772673105672,
+      "thresholds": {
+        "0.45": {
+          "success_rate": 1.0,
+          "step_mean": 1.0,
+          "time_mean": 0.9018993377685547,
+          "cost_mean": 2400.0
+        },
+        "0.40": {
+          "success_rate": 1.0,
+          "step_mean": 1.2,
+          "time_mean": 1.0801875114440918,
+          "cost_mean": 2710.0
+        },
+        "0.38": {
+          "success_rate": 1.0,
+          "step_mean": 1.4,
+          "time_mean": 1.2576941013336183,
+          "cost_mean": 3020.0
+        },
+        "0.36": {
+          "success_rate": 1.0,
+          "step_mean": 2.6,
+          "time_mean": 2.310271120071411,
+          "cost_mean": 4880.0
+        }
+      }
+    },
+    "krotov_hybrid_sw050": {
+      "n_runs": 5,
+      "final_loss_mean": 0.3540733809134481,
+      "final_loss_std": 0.01144956101385581,
+      "final_test_acc_mean": 0.8386666666666667,
+      "final_test_acc_std": 0.012220201853215599,
+      "wall_time_mean": 21.486237716674804,
+      "wall_time_std": 2.354929083450488,
+      "cost_mean": 38360.0,
+      "cost_std": 4205.044589537666,
+      "loss_step1_mean": 0.3816728588788375,
+      "loss_step10_mean": 0.3447084023599508,
+      "tail_loss_std_mean": 0.03410352421528946,
+      "tail_update_norm_mean": 1.8826772673105672,
+      "thresholds": {
+        "0.45": {
+          "success_rate": 1.0,
+          "step_mean": 1.0,
+          "time_mean": 0.927022647857666,
+          "cost_mean": 2400.0
+        },
+        "0.40": {
+          "success_rate": 1.0,
+          "step_mean": 1.2,
+          "time_mean": 1.1036248207092285,
+          "cost_mean": 2710.0
+        },
+        "0.38": {
+          "success_rate": 1.0,
+          "step_mean": 1.4,
+          "time_mean": 1.281026029586792,
+          "cost_mean": 3020.0
+        },
+        "0.36": {
+          "success_rate": 1.0,
+          "step_mean": 2.6,
+          "time_mean": 2.3369348526000975,
+          "cost_mean": 4880.0
+        }
+      }
+    },
+    "krotov_online": {
+      "n_runs": 5,
+      "final_loss_mean": 0.3540733809134481,
+      "final_loss_std": 0.01144956101385581,
+      "final_test_acc_mean": 0.8386666666666667,
+      "final_test_acc_std": 0.012220201853215599,
+      "wall_time_mean": 22.811717319488526,
+      "wall_time_std": 2.9064767266471927,
+      "cost_mean": 38360.0,
+      "cost_std": 4205.044589537666,
+      "loss_step1_mean": 0.3816728588788375,
+      "loss_step10_mean": 0.3447084023599508,
+      "tail_loss_std_mean": 0.03410352421528946,
+      "tail_update_norm_mean": 1.8826772673105672,
+      "thresholds": {
+        "0.45": {
+          "success_rate": 1.0,
+          "step_mean": 1.0,
+          "time_mean": 0.9848813056945801,
+          "cost_mean": 2400.0
+        },
+        "0.40": {
+          "success_rate": 1.0,
+          "step_mean": 1.2,
+          "time_mean": 1.190436315536499,
+          "cost_mean": 2710.0
+        },
+        "0.38": {
+          "success_rate": 1.0,
+          "step_mean": 1.4,
+          "time_mean": 1.3787405014038085,
+          "cost_mean": 3020.0
+        },
+        "0.36": {
+          "success_rate": 1.0,
+          "step_mean": 2.6,
+          "time_mean": 2.554554748535156,
+          "cost_mean": 4880.0
+        }
+      }
+    },
+    "lbfgs": {
+      "n_runs": 5,
+      "final_loss_mean": 0.32146816131825295,
+      "final_loss_std": 0.01193837060640497,
+      "final_test_acc_mean": 0.8480000000000001,
+      "final_test_acc_std": 0.021249836600678983,
+      "wall_time_mean": 47.766297817230225,
+      "wall_time_std": 8.783043366316663,
+      "cost_mean": 121130.0,
+      "cost_std": 27212.985870719884,
+      "loss_step1_mean": 0.7139319028199369,
+      "loss_step10_mean": 0.43042741879526203,
+      "tail_loss_std_mean": 9.255871058952586e-05,
+      "tail_update_norm_mean": 0.024895545536192644,
+      "thresholds": {
+        "0.45": {
+          "success_rate": 1.0,
+          "step_mean": 7.8,
+          "time_mean": 4.939058065414429,
+          "cost_mean": 12940.0
+        },
+        "0.40": {
+          "success_rate": 1.0,
+          "step_mean": 15.2,
+          "time_mean": 9.688926601409912,
+          "cost_mean": 24410.0
+        },
+        "0.38": {
+          "success_rate": 1.0,
+          "step_mean": 18.2,
+          "time_mean": 11.486339139938355,
+          "cost_mean": 29060.0
+        },
+        "0.36": {
+          "success_rate": 1.0,
+          "step_mean": 26.2,
+          "time_mean": 16.406939649581908,
+          "cost_mean": 41460.0
+        }
+      }
+    }
+  }
+}

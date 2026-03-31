@@ -1,0 +1,98 @@
+{
+  "krotov_hybrid": {
+    "final_loss_mean": 0.3461568903442077,
+    "final_loss_std": 0.01984442235724095,
+    "final_test_acc_mean": 0.8706666666666667,
+    "final_test_acc_std": 0.014966629547095775,
+    "wall_time_mean": 28.887881374359132,
+    "wall_time_std": 12.990922529347237,
+    "cost_mean": 90750.0,
+    "cost_std": 44015.633586261145,
+    "thresholds": {
+      "0.45": {
+        "success_rate": 1.0,
+        "time_mean": 0.985054349899292,
+        "cost_mean": 2710.0
+      },
+      "0.40": {
+        "success_rate": 1.0,
+        "time_mean": 1.2171711444854736,
+        "cost_mean": 3330.0
+      },
+      "0.38": {
+        "success_rate": 1.0,
+        "time_mean": 4.577047491073609,
+        "cost_mean": 12940.0
+      },
+      "0.36": {
+        "success_rate": 0.6,
+        "time_mean": 2.4680362542470298,
+        "cost_mean": 6533.333333333333
+      }
+    }
+  },
+  "adam": {
+    "final_loss_mean": 0.34436248357429705,
+    "final_loss_std": 0.025126371138898852,
+    "final_test_acc_mean": 0.8786666666666665,
+    "final_test_acc_std": 0.01950498511777038,
+    "wall_time_mean": 40.78985538482666,
+    "wall_time_std": 0.13460218821628508,
+    "cost_mean": 155850.0,
+    "cost_std": 0.0,
+    "thresholds": {
+      "0.45": {
+        "success_rate": 1.0,
+        "time_mean": 5.425719165802002,
+        "cost_mean": 20690.0
+      },
+      "0.40": {
+        "success_rate": 1.0,
+        "time_mean": 9.347086524963379,
+        "cost_mean": 35570.0
+      },
+      "0.38": {
+        "success_rate": 1.0,
+        "time_mean": 12.41131272315979,
+        "cost_mean": 47350.0
+      },
+      "0.36": {
+        "success_rate": 0.6,
+        "time_mean": 5.469205300013225,
+        "cost_mean": 21000.0
+      }
+    }
+  },
+  "lbfgs": {
+    "final_loss_mean": 0.34427350527939604,
+    "final_loss_std": 0.025030107660188764,
+    "final_test_acc_mean": 0.8799999999999999,
+    "final_test_acc_std": 0.019321835661585907,
+    "wall_time_mean": 13.32925853729248,
+    "wall_time_std": 3.0155749377182226,
+    "cost_mean": 42080.0,
+    "cost_std": 7939.874054416732,
+    "thresholds": {
+      "0.45": {
+        "success_rate": 1.0,
+        "time_mean": 3.21392502784729,
+        "cost_mean": 10460.0
+      },
+      "0.40": {
+        "success_rate": 1.0,
+        "time_mean": 4.773530387878418,
+        "cost_mean": 15420.0
+      },
+      "0.38": {
+        "success_rate": 1.0,
+        "time_mean": 5.5562817573547365,
+        "cost_mean": 17900.0
+      },
+      "0.36": {
+        "success_rate": 0.6,
+        "time_mean": 3.842374563217163,
+        "cost_mean": 13250.0
+      }
+    }
+  }
+}
