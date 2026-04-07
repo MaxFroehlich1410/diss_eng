@@ -6,7 +6,7 @@
 \usepackage{amsmath}
 \usepackage{hyperref}
 
-\title{Hybrid Krotov Schedule in the Two-Moons QML Benchmark}
+\title{Hybrid Krotov Schedules in QML Classification Benchmarks}
 \author{Codex experiment report}
 \date{\today}
 
@@ -14,119 +14,185 @@
 \maketitle
 
 \section*{Experimental setup}
-This report updates the two-moons QML benchmark with a new hybrid Krotov optimizer that runs the original online stale-adjoint update for an initial phase and then switches to the full-batch Krotov update. The benchmark keeps the same model and data pipeline as the earlier experiments: 4 qubits, 3 trainable layers, 5 random seeds, and 100 outer iterations on the same train/test split convention. The main comparison contains:
+This report benchmarks four optimizer families on quantum machine learning classification tasks:
 \begin{itemize}
-\item \texttt{krotov\_online} with step size $0.3$,
-\item \texttt{krotov\_batch} with step size $1.0$,
-\item \texttt{krotov\_hybrid} with online step size $0.3$, batch step size $1.0$, and default switch at iteration 20,
-\item Adam,
-\item L-BFGS-B.
+\item \textbf{Hybrid Krotov}: online stale-adjoint update for an initial phase, then switching to the full-batch Krotov update at iteration 10.
+\item \textbf{Adam} with full-batch parameter-shift gradients.
+\item \textbf{L-BFGS-B} with full-batch parameter-shift gradients.
+\item \textbf{Quantum Natural Gradient (QNG)}: full-batch BCE gradient preconditioned by the Fubini-Study metric tensor, recomputed at every iteration, with Tikhonov regularisation $\lambda$.
 \end{itemize}
 
-The hybrid sweep varies the switch point over $\{5, 10, 20, 30, 50\}$. The fair accounting axis remains
+Three experiments are reported. The first two use literature-derived QML models on the two-moons classification task:
+\begin{itemize}
+\item \textbf{Simonetti--Perri--Gervasi hybrid classifier}: full hybrid model including the classical readout head, 1000 two-moons samples, noise 0.05, 20 iterations, 3 seeds.
+\item \textbf{Chen SUN-VQC}: two macro-layers, richer $(R_y,R_z)$ data encoding, 300 two-moons samples, noise 0.07, 20 iterations, 3 seeds.
+\end{itemize}
+The third experiment uses a 4-qubit, 3-layer HEA on the binary Iris dataset (100 iterations, 5 seeds), described in a later section.
+
+For each model, all optimizers see the same train/test split, the same random seed, the same iteration budget, and the same full trainable parameter vector. The hybrid Krotov implementation updates gate-supported parameters via the Krotov contribution while non-gate parameters (such as the Simonetti classical head) receive exact loss gradients within the same epoch. The fair accounting axis remains
 \[
-\text{cost units} = \text{sample forward passes} + \text{sample backward passes},
+\text{cost units} = \text{sample forward passes} + \text{sample backward passes}.
 \]
-so all Krotov-family methods are compared under the same primitive propagation accounting as before.
 
 \section*{Main findings}
 \begin{enumerate}
-\item The hybrid direction is strongly supported. The best tested hybrid setting is \texttt{Hybrid sw=10}, which reaches mean final loss 0.329 $\pm$ 0.012. This is lower than pure online (0.354), pure batch (0.365), Adam (0.355), and L-BFGS-B (0.321) on the five-seed study.
-\item The hybrid preserves the defining early-strength of online Krotov. For the benchmark threshold loss $\leq 0.40$, the fastest hybrid is \texttt{Hybrid sw=5}, which reaches the threshold in 1.1s on average. Pure online reaches the same threshold in 1.2s, while batch, Adam, and L-BFGS-B need 26.8s, 26.6s, and 9.7s, respectively.
-\item The switch removes the late online oscillation almost completely. The online baseline has mean tail loss standard deviation 0.0341, whereas \texttt{Hybrid sw=10} drops that to 0.0001. The tail update norm shows the same pattern: the online rule keeps moving aggressively, while the hybrid settles into a near-stationary refinement regime after the switch.
-\item On optimization-centric metrics, the best hybrid setting dominates the tested alternatives in this study. The only notable caveat is that Adam still has the highest mean final test accuracy (0.868 versus 0.841 for the best hybrid), so the dominance claim is strongest for optimization speed and training objective value rather than for every downstream metric.
+\item Under the fair benchmark, \emph{all four optimizers produce acceptable or excellent train/test results on both two-moons models}. Mean final test accuracies range from 0.906 (Adam on Chen) to 1.000 (L-BFGS-B and QNG on Simonetti), so the remaining differences are meaningful optimizer effects.
+\item On the Simonetti model, QNG achieves the second-lowest final loss (0.134) after L-BFGS-B (0.001), substantially outperforming both hybrid Krotov (0.448) and Adam (0.372), while matching L-BFGS-B's perfect test accuracy.
+\item On the Chen SUN-VQC, QNG (loss 0.399) and L-BFGS-B (0.393) finish in a near-tie, both ahead of hybrid Krotov (0.437) and Adam (0.484). QNG achieves the highest test accuracy (0.989).
+\item Hybrid Krotov consistently shows the strongest first step across both models, confirming that the online-to-batch schedule makes an aggressive early move. On Chen, the hybrid-over-Adam gap persists through the full training budget.
+\item On Iris, all four methods converge to strong classifiers. Hybrid Krotov achieves the lowest final loss and the fastest threshold crossing.
 \end{enumerate}
 
-\section*{Quantitative comparison of the dominant methods}
+\section*{Quantitative comparison --- two-moons models}
 \begin{table}[H]
 \centering
+\small
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llcccccc}
+\toprule
+Model & Optimizer & Final loss & Final train acc. & Final test acc. & Wall time (s) & Success @ 0.45 & Time to $\leq 0.45$ (s) \\
+\midrule
+Simonetti full hybrid & Hybrid Krotov & 0.448 $\pm$ 0.055 & 0.990 $\pm$ 0.010 & 0.990 $\pm$ 0.008 & 86.0 & 0.33 & 53.2 \\
+Simonetti full hybrid & Adam & 0.372 $\pm$ 0.028 & 0.984 $\pm$ 0.008 & 0.985 $\pm$ 0.008 & 66.6 & 1.00 & 54.6 \\
+Simonetti full hybrid & L-BFGS-B & 0.001 $\pm$ 0.001 & 1.000 $\pm$ 0.000 & 1.000 $\pm$ 0.000 & 84.1 & 1.00 & 35.1 \\
+Simonetti full hybrid & QNG & 0.134 $\pm$ 0.008 & 1.000 $\pm$ 0.001 & 1.000 $\pm$ 0.000 & 148.1 & 1.00 & 67.8 \\
+\midrule
+Chen SUN-VQC improved & Hybrid Krotov & 0.437 $\pm$ 0.013 & 0.981 $\pm$ 0.007 & 0.978 $\pm$ 0.008 & 100.7 & 0.67 & 40.6 \\
+Chen SUN-VQC improved & Adam & 0.484 $\pm$ 0.017 & 0.942 $\pm$ 0.026 & 0.906 $\pm$ 0.044 & 96.8 & 0.00 & -- \\
+Chen SUN-VQC improved & L-BFGS-B & 0.393 $\pm$ 0.011 & 0.983 $\pm$ 0.003 & 0.983 $\pm$ 0.014 & 93.7 & 1.00 & 36.7 \\
+Chen SUN-VQC improved & QNG & 0.399 $\pm$ 0.004 & 0.986 $\pm$ 0.008 & 0.989 $\pm$ 0.008 & 183.9 & 1.00 & 56.6 \\
+\bottomrule
+\end{tabular}
+}
+\caption{Optimizer comparison on the Simonetti and Chen models (3 seeds, 20 iterations). The time-to-threshold column averages only over runs that reach the threshold.}
+\end{table}
+
+\section*{Simonetti--Perri--Gervasi full hybrid classifier}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/qng_simonetti_full_hybrid_loss_vs_iteration.pdf}
+\caption{Simonetti full hybrid model: mean training loss versus iteration for all four optimizers.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/qng_simonetti_full_hybrid_loss_vs_time.pdf}
+\caption{Simonetti full hybrid model: mean training loss versus wall-clock time.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/qng_simonetti_full_hybrid_loss_vs_cost.pdf}
+\caption{Simonetti full hybrid model: mean training loss versus fair propagation cost.}
+\end{figure}
+
+The Simonetti experiment shows that once the model is restored to its full paper-like form with the classical readout head, all four optimizers achieve excellent classification. Mean final test accuracy is 1.000 for both L-BFGS-B and QNG, 0.990 for hybrid Krotov, and 0.985 for Adam. The loss curves reveal a clear hierarchy: L-BFGS-B converges fastest and reaches near-zero loss; QNG converges more slowly in wall time but achieves the second-lowest final loss (0.134), far below both hybrid Krotov (0.448) and Adam (0.372). Hybrid Krotov retains its characteristic strong first step, but the advantage is transient on this model.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/qng_simonetti_full_hybrid_decision_boundaries.pdf}
+\caption{Simonetti full hybrid model: representative learned decision boundaries.}
+\end{figure}
+
+The decision boundaries show that all four optimizers learn an excellent moons-shaped separator. The key distinction is confidence calibration: L-BFGS-B and QNG both drive the boundary to near-perfect confidence, while hybrid Krotov and Adam produce slightly softer separators and therefore pay a larger cross-entropy penalty despite near-perfect classification accuracy.
+
+\section*{Chen SUN-VQC with stronger encoding}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/qng_chen_sun_vqc_improved_loss_vs_iteration.pdf}
+\caption{Improved Chen SUN-VQC: mean training loss versus iteration for all four optimizers.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/qng_chen_sun_vqc_improved_loss_vs_time.pdf}
+\caption{Improved Chen SUN-VQC: mean training loss versus wall-clock time.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\linewidth]{figures/qng_chen_sun_vqc_improved_loss_vs_cost.pdf}
+\caption{Improved Chen SUN-VQC: mean training loss versus fair propagation cost.}
+\end{figure}
+
+The Chen experiment is now a close contest among three strong optimizers. QNG reaches mean final loss 0.399 with test accuracy 0.989, L-BFGS-B finishes at 0.393 with test accuracy 0.983, and hybrid Krotov at 0.437 with test accuracy 0.978. Adam lags behind at 0.484 with test accuracy 0.906. The loss curves show that hybrid Krotov and QNG both drop sharply during the early iterations, but QNG continues refining and finishes slightly lower. L-BFGS-B overtakes the field around iteration 10 and finishes best. All four optimizers reach the $\leq 0.45$ threshold except Adam (0/3 seeds); QNG reaches it in all 3 seeds (at 56.6\,s on average) compared with 2/3 for hybrid Krotov (40.6\,s).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\linewidth]{figures/qng_chen_sun_vqc_improved_decision_boundaries.pdf}
+\caption{Improved Chen SUN-VQC: representative learned decision boundaries.}
+\end{figure}
+
+The decision boundaries reinforce the quantitative picture. Hybrid Krotov, QNG, and L-BFGS-B all learn a clear, sharply curved separator that tracks the two-moons geometry closely. Adam still learns the problem to a reasonable extent, but its boundary is visibly less well aligned in the overlap region and yields the weakest held-out accuracy.
+
+\section*{Iris binary classification benchmark}
+To test whether the optimizer ranking generalizes beyond the two-moons geometry, we run an additional benchmark on the Iris dataset restricted to a binary task (setosa vs.\ versicolor, first two features, scaled to $[0,\pi]$). The circuit is the same 4-qubit, 3-layer HEA used in the original two-moons study. The protocol uses 5 random seeds, 100 outer iterations, and the same fair cost accounting as before.
+
+\begin{table}[H]
+\centering
+\resizebox{\linewidth}{!}{%
 \begin{tabular}{lcccccc}
 \toprule
 Optimizer & Final loss & Final test acc. & Wall time (s) & Time to $\leq 0.40$ (s) & Success @ 0.40 & Tail std. \\
 \midrule
-Krotov online & 0.354 $\pm$ 0.011 & 0.839 $\pm$ 0.012 & 22.8 $\pm$ 2.9 & 1.2 & 1.00 & 0.0341 \\
-Krotov batch & 0.365 $\pm$ 0.036 & 0.852 $\pm$ 0.015 & 65.0 $\pm$ 0.9 & 26.8 & 0.80 & 0.0024 \\
-Hybrid sw=10 & 0.329 $\pm$ 0.012 & 0.841 $\pm$ 0.023 & 58.2 $\pm$ 11.1 & 1.1 & 1.00 & 0.0001 \\
-Adam & 0.355 $\pm$ 0.041 & 0.868 $\pm$ 0.025 & 67.4 $\pm$ 3.8 & 26.6 & 0.80 & 0.0009 \\
-L-BFGS-B & 0.321 $\pm$ 0.012 & 0.848 $\pm$ 0.021 & 47.8 $\pm$ 8.8 & 9.7 & 1.00 & 0.0001 \\
+Hybrid Krotov & 0.255 $\pm$ 0.025 & 0.980 $\pm$ 0.024 & 18.6 $\pm$ 1.1 & 0.3 & 1.00 & 0.0000 \\
+Adam & 0.273 $\pm$ 0.023 & 0.970 $\pm$ 0.024 & 17.0 $\pm$ 0.7 & 3.4 & 1.00 & 0.0017 \\
+L-BFGS-B & 0.263 $\pm$ 0.018 & 0.980 $\pm$ 0.024 & 7.4 $\pm$ 1.2 & 0.9 & 1.00 & 0.0000 \\
+QNG & 0.267 $\pm$ 0.022 & 0.970 $\pm$ 0.024 & 39.7 $\pm$ 0.3 & 2.4 & 1.00 & 0.0001 \\
 \bottomrule
-\end{tabular}
-\caption{Direct comparison on the aligned five-seed benchmark.}
+\end{tabular}}
+\caption{Iris binary classification benchmark (5 seeds, 100 iterations). QNG uses learning rate 0.5 and metric-tensor regularisation $\lambda=0.01$.}
 \end{table}
 
-The quantitative picture is unusually clean. The best hybrid run improves final loss over both pure Krotov baselines while preserving the near-instant threshold crossing that previously belonged only to the online method. At the same time it retains the practical wall-clock advantage over Adam and L-BFGS-B, finishing in 58.2s on average versus 67.4s for Adam and 47.8s for L-BFGS-B.
+On Iris all four optimizers reach the $\leq 0.40$ threshold in every seed, and all achieve strong final test accuracy ($\geq 0.97$). The main differentiator is speed. Hybrid Krotov crosses the threshold fastest (0.3\,s on average, after just one online update), followed by L-BFGS-B (0.9\,s), QNG (2.4\,s), and Adam (3.4\,s). On final loss, hybrid Krotov is again best (0.255) and has zero tail oscillation, matching L-BFGS-B.  QNG converges to a comparable final loss (0.267) and shows very low tail noise (0.0001), but at substantially higher wall-clock cost (39.7\,s vs.\ 18.6\,s for hybrid Krotov) because of the per-iteration metric-tensor overhead.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\linewidth]{figures/comparison_loss_vs_iteration.pdf}
-\caption{Training loss versus iteration for the main comparison, with the best hybrid variant substituted for the generic hybrid family.}
+\includegraphics[width=0.72\linewidth]{figures/iris_loss_vs_iteration.pdf}
+\caption{Iris HEA benchmark: mean training loss versus iteration for all four optimizers.}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\linewidth]{figures/comparison_loss_vs_time.pdf}
-\caption{Training loss versus wall-clock time. The hybrid closes the final-loss gap without sacrificing the practical runtime advantage.}
+\includegraphics[width=0.72\linewidth]{figures/iris_loss_vs_time.pdf}
+\caption{Iris HEA benchmark: mean training loss versus wall-clock time.}
 \end{figure}
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\linewidth]{figures/comparison_loss_vs_cost.pdf}
-\caption{Training loss versus fair propagation cost. The hybrid inherits the rapid early threshold crossing of the online rule while remaining as propagation-efficient as the other Krotov-family methods.}
+\includegraphics[width=0.72\linewidth]{figures/iris_loss_vs_cost.pdf}
+\caption{Iris HEA benchmark: mean training loss versus fair propagation cost.}
 \end{figure}
+
+The loss curves confirm a clear separation into two groups. Hybrid Krotov and L-BFGS-B drop rapidly during the first few iterations and converge to near-identical plateaus, while Adam and QNG converge more gradually but reach similar final values.  The cost-unit view shows that QNG is the most expensive per iteration (680 cost units per step vs.\ 520 for Adam) because of the additional forward and backward passes needed for the Fubini-Study metric tensor.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.8\linewidth]{figures/time_to_threshold_boxplot.pdf}
-\caption{Wall-clock time to reach the benchmark threshold loss $\leq 0.40$.}
+\includegraphics[width=\linewidth]{figures/iris_decision_boundaries.pdf}
+\caption{Iris HEA benchmark: representative decision boundaries for the median-loss run of each optimizer.}
 \end{figure}
 
-\section*{Switch sweep}
-\begin{table}[H]
-\centering
-\begin{tabular}{lcccc}
-\toprule
-Hybrid setting & Final loss & Wall time (s) & Time to $\leq 0.40$ (s) & Tail std. \\
-\midrule
-Hybrid sw=5 & 0.332 $\pm$ 0.013 & 48.1 & 1.1 & 0.0025 \\
-Hybrid sw=10 & 0.329 $\pm$ 0.012 & 58.2 & 1.1 & 0.0001 \\
-Hybrid sw=20 & 0.346 $\pm$ 0.014 & 27.2 & 1.1 & 0.0183 \\
-Hybrid sw=30 & 0.354 $\pm$ 0.011 & 21.3 & 1.1 & 0.0341 \\
-Hybrid sw=50 & 0.354 $\pm$ 0.011 & 21.5 & 1.1 & 0.0341 \\
-\bottomrule
-\end{tabular}
-\caption{Hybrid switch sweep. Earlier switches perform best on this benchmark, with the switch-at-10 setting giving the strongest overall result.}
-\end{table}
+All four optimizers learn a clean separator between the two Iris classes. The boundaries are qualitatively similar, reflecting the fact that setosa vs.\ versicolor is nearly linearly separable in the sepal-length/sepal-width plane.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.82\linewidth]{figures/hybrid_switch_loss_vs_iteration.pdf}
-\caption{Loss versus iteration for the hybrid switch sweep. Very late switches drift back toward the noisier online behavior.}
+\includegraphics[width=0.72\linewidth]{figures/iris_update_norm_vs_iteration.pdf}
+\caption{Iris HEA benchmark: parameter update norm versus iteration. Hybrid Krotov makes a large initial move during the online phase and then settles into a near-zero batch refinement regime.}
 \end{figure}
 
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.8\linewidth]{figures/comparison_update_norm_vs_iteration.pdf}
-\caption{Update norms for the main comparison. The hybrid retains a strong early move and then settles into a batch-like refinement regime.}
-\end{figure}
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=0.8\linewidth]{figures/hybrid_phase_transition_trace.pdf}
-\caption{Representative hybrid trace with the phase transition marked explicitly. The loss flattens rapidly after the switch while update norms collapse.}
-\end{figure}
-
-\section*{Interpretation}
-The hybrid result supports a more specific story than the earlier batch-only report. The online rule appears to be valuable primarily as a short, high-gain transient that moves the parameters into a good basin very quickly. Leaving it active for too long produces unnecessary late-stage noise. The batch rule, in contrast, is well suited to stable refinement once that basin has been reached. The hybrid schedule works because it assigns each mechanism to the regime where it is strongest.
-
-This means the current evidence favors ``online then batch'' over either pure online or pure batch. In the tested configuration, the hybrid schedule is not merely a compromise. It is the strongest optimizer among the tested methods on mean final training loss, fair-cost threshold crossing, and wall-clock time-to-solution. That makes it the best current headline result in this benchmark, subject to the modest caveat that Adam retains a slightly higher mean final test accuracy.
-
-\begin{figure}[H]
-\centering
-\includegraphics[width=\linewidth]{figures/comparison_decision_boundaries.pdf}
-\caption{Representative decision boundaries for the main comparison.}
-\end{figure}
+The update-norm plot illustrates the hybrid phase transition clearly: the online phase produces a large initial spike that collapses once the batch phase takes over at iteration 10. L-BFGS-B shows a similar but more prolonged decay driven by its internal line search. Adam and QNG make smaller but persistent updates throughout, consistent with their more gradual convergence profiles.
 
 \section*{Conclusion}
-The new experiments upgrade the research story substantially. The batch Krotov method already showed that objective-aligned updates could be competitive with gradient baselines. The hybrid schedule goes further: it preserves the fast early progress of online Krotov, removes the online oscillation, improves the final training loss beyond the pure batch rule, and on this five-seed benchmark dominates all tested methods on the central optimization metrics. The next natural step would be local tuning around the switch-at-10 setting and then repeating the study on a larger seed budget to confirm the effect size.
+This report benchmarks hybrid Krotov against Adam, L-BFGS-B, and QNG across three experiments: the Simonetti full hybrid model on two-moons, the Chen SUN-VQC on two-moons, and a 4-qubit HEA on binary Iris.
+
+\textbf{Simonetti (two-moons).} All four optimizers train the model extremely well. L-BFGS-B dominates with near-zero loss; QNG finishes second with loss 0.134 and perfect test accuracy; Adam and hybrid Krotov produce slightly weaker objective values but still excellent classification.
+
+\textbf{Chen SUN-VQC (two-moons).} QNG and L-BFGS-B finish in a near-tie (0.399 vs.\ 0.393), both ahead of hybrid Krotov (0.437). QNG achieves the highest test accuracy (0.989). Hybrid Krotov retains a clear advantage over Adam on all metrics. The hybrid-over-Adam signal survives the addition of the stronger QNG baseline.
+
+\textbf{Iris HEA.} All four optimizers converge to strong classifiers. Hybrid Krotov achieves the lowest final loss and the fastest threshold crossing. QNG, with a properly tuned learning rate, reaches comparable final performance but at substantially higher computational cost.
+
+Taken together, the evidence shows that QNG is a strong optimizer when properly tuned, achieving low loss and high accuracy across all models, though at higher computational cost due to the per-iteration metric-tensor overhead. Hybrid Krotov remains competitive through its aggressive early convergence and stable late-stage refinement, particularly on gate-centric circuits. L-BFGS-B remains the strongest tested method on the two-moons models whenever second-order information is cheap to obtain. Adam is consistently the weakest of the four on these benchmarks, though it still produces acceptable classifiers in all cases.
 
 \end{document}

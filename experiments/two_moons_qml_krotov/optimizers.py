@@ -7,6 +7,7 @@ Implemented optimizers
 - ``krotov_minibatch``: optional mini-batch variant of the batch update
 - ``adam``: Adam with full-batch parameter-shift gradients
 - ``lbfgs``: L-BFGS-B with parameter-shift gradients
+- ``qng``: Quantum Natural Gradient with Fubini-Study metric tensor
 
 Accounting convention
 ---------------------
@@ -157,7 +158,7 @@ def _should_early_stop(trace, patience, min_delta, warmup):
     return (current_step - best_step) >= patience
 
 
-def _krotov_terminal_costate(model, final_state, y):
+def _krotov_terminal_costate(model, final_state, y, params=None, x=None):
     """Return the BCE terminal co-state for a single sample.
 
     Let
@@ -180,6 +181,11 @@ def _krotov_terminal_costate(model, final_state, y):
     size twice as large. We fix the co-state here and keep the learning rate
     explicit and configurable.
     """
+    if hasattr(model, "terminal_costate"):
+        if params is None or x is None:
+            raise ValueError("Model-specific terminal_costate requires params and x.")
+        return model.terminal_costate(params, x, y, final_state)
+
     z = np.real(final_state.conj() @ model.obs @ final_state)
     p = np.clip((z + 1.0) / 2.0, EPS, 1.0 - EPS)
     dloss_dp = -y / p + (1.0 - y) / (1.0 - p)
@@ -202,7 +208,7 @@ def _sample_krotov_contribution(model, params, x, y):
     """Compute one sample's gate-wise Krotov contribution at fixed params."""
     gates, fwd_states = model.get_gate_sequence_and_states(params, x)
     chi_states = _build_costates(
-        gates, _krotov_terminal_costate(model, fwd_states[-1], y)
+        gates, _krotov_terminal_costate(model, fwd_states[-1], y, params=params, x=x)
     )
 
     contribution = np.zeros_like(params)
@@ -242,7 +248,7 @@ def _krotov_single_sample_update(model, params, x, y, step_size):
     """
     gates, fwd_states = model.get_gate_sequence_and_states(params, x)
     chi_states = _build_costates(
-        gates, _krotov_terminal_costate(model, fwd_states[-1], y)
+        gates, _krotov_terminal_costate(model, fwd_states[-1], y, params=params, x=x)
     )
 
     new_params = params.copy()
@@ -324,11 +330,30 @@ def _run_krotov_online_epoch(model, params, X_train, y_train, step_size, iterati
 
     sample_contributions = np.asarray(sample_contributions)
     mean_contribution = np.mean(sample_contributions, axis=0)
+    classical_grad = np.zeros_like(params)
+    nongate_indices = (
+        np.asarray(model.nongate_parameter_indices(), dtype=int)
+        if hasattr(model, "nongate_parameter_indices")
+        else np.array([], dtype=int)
+    )
+    if len(nongate_indices) > 0:
+        if hasattr(model, "nongate_loss_gradient"):
+            classical_grad, classical_stats = model.nongate_loss_gradient(params, X_train, y_train)
+        else:
+            classical_grad, classical_stats = model.loss_gradient(params, X_train, y_train)
+            mask = np.ones_like(classical_grad, dtype=bool)
+            mask[nongate_indices] = False
+            classical_grad[mask] = 0.0
+        _apply_counter_delta(counter_delta, classical_stats)
+        counter_delta["gradient_evaluations"] += 1
+        params = params - step_size * classical_grad
+
+    combined_grad = mean_contribution + classical_grad
     diagnostics = {
         "phase": "online",
         "step_size": float(step_size),
         "update_norm": float(np.linalg.norm(params - params_before)),
-        "gradient_norm": float(np.linalg.norm(mean_contribution)),
+        "gradient_norm": float(np.linalg.norm(combined_grad)),
         "contribution_variance": float(np.mean(np.var(sample_contributions, axis=0))),
     }
     return params, diagnostics, counter_delta
@@ -339,13 +364,31 @@ def _run_krotov_batch_epoch(model, params, X_train, y_train, step_size):
     mean_contribution, contribution_variance, counter_delta = _krotov_contribution_batch(
         model, params, X_train, y_train
     )
-    update = step_size * mean_contribution
+    classical_grad = np.zeros_like(params)
+    nongate_indices = (
+        np.asarray(model.nongate_parameter_indices(), dtype=int)
+        if hasattr(model, "nongate_parameter_indices")
+        else np.array([], dtype=int)
+    )
+    if len(nongate_indices) > 0:
+        if hasattr(model, "nongate_loss_gradient"):
+            classical_grad, classical_stats = model.nongate_loss_gradient(params, X_train, y_train)
+        else:
+            classical_grad, classical_stats = model.loss_gradient(params, X_train, y_train)
+            mask = np.ones_like(classical_grad, dtype=bool)
+            mask[nongate_indices] = False
+            classical_grad[mask] = 0.0
+        _apply_counter_delta(counter_delta, classical_stats)
+        counter_delta["gradient_evaluations"] += 1
+
+    combined_grad = mean_contribution + classical_grad
+    update = step_size * combined_grad
     params = params - update
     diagnostics = {
         "phase": "batch",
         "step_size": float(step_size),
         "update_norm": float(np.linalg.norm(update)),
-        "gradient_norm": float(np.linalg.norm(mean_contribution)),
+        "gradient_norm": float(np.linalg.norm(combined_grad)),
         "contribution_variance": float(contribution_variance),
     }
     return params, diagnostics, counter_delta
@@ -857,6 +900,214 @@ def train_krotov_hybrid(
     return params, trace
 
 
+def _compute_state_derivatives(model, params, x):
+    """Compute d|psi>/d(theta_k) for each gate parameter for a single sample.
+
+    For gate *g* controlled by parameter *k* with generator ``G_k`` the
+    state derivative is
+
+        d|psi>/d(theta_k) = U_after_g @ G_k @ |phi_{g+1}>
+
+    where ``U_after_g`` is the product of all unitaries applied after gate *g*
+    and ``|phi_{g+1}>`` is the forward state just after gate *g*.
+
+    Returns
+    -------
+    dpsi : dict[int, ndarray]
+        Mapping from parameter index to the derivative of the final quantum
+        state with respect to that parameter.
+    final_state : ndarray
+        The final quantum state |psi>.
+    """
+    gates, fwd_states = model.get_gate_sequence_and_states(params, x)
+    final_state = fwd_states[-1]
+    n_gates = len(gates)
+
+    if n_gates == 0:
+        return {}, final_state
+
+    dim = len(final_state)
+
+    # suffix_after[g] = G_{N-1} @ ... @ G_{g+1}  (gates applied after gate g)
+    suffix_after = [None] * n_gates
+    suffix_after[n_gates - 1] = np.eye(dim, dtype=complex)
+    for g in range(n_gates - 2, -1, -1):
+        suffix_after[g] = suffix_after[g + 1] @ gates[g + 1][0]
+
+    dpsi = {}
+    for g, (_, pidx) in enumerate(gates):
+        if pidx is None:
+            continue
+        gen = model.gate_derivative_generator(pidx, x)
+        dpsi[pidx] = suffix_after[g] @ (gen @ fwd_states[g + 1])
+
+    return dpsi, final_state
+
+
+def _compute_metric_tensor(model, params, X, gate_indices, approx=None, lam=0.0):
+    """Compute the average Fubini-Study metric tensor over a batch.
+
+    The metric tensor element for gate parameters *i* and *j* is
+
+        g_{ij} = Re[ <d_i psi | d_j psi> - <d_i psi | psi><psi | d_j psi> ]
+
+    averaged over all samples in *X*.
+
+    Parameters
+    ----------
+    model : model instance
+        QML model exposing ``get_gate_sequence_and_states`` and
+        ``gate_derivative_generator``.
+    params : ndarray
+        Current parameter values.
+    X : ndarray
+        Training inputs (one row per sample).
+    gate_indices : array-like of int
+        Indices of the quantum (gate) parameters.
+    approx : {None, "diag"}, optional
+        ``None`` for the full metric tensor, ``"diag"`` for the diagonal
+        approximation only.
+    lam : float
+        Tikhonov regularisation: ``G + lam * I``.
+
+    Returns
+    -------
+    MT : ndarray, shape ``(n_gate, n_gate)``
+        Regularised metric tensor.
+    stats : dict
+        Cost-accounting counters.
+    """
+    n_gate = len(gate_indices)
+    empty_stats = {
+        "sample_forward_passes": 0,
+        "sample_backward_passes": 0,
+        "full_loss_evaluations": 0,
+        "gradient_evaluations": 0,
+    }
+    if n_gate == 0:
+        return np.empty((0, 0)), empty_stats
+
+    MT_sum = np.zeros((n_gate, n_gate), dtype=float)
+
+    for x in X:
+        dpsi, final_state = _compute_state_derivatives(model, params, x)
+
+        dpsi_vecs = []
+        overlaps = []
+        for idx in gate_indices:
+            vec = dpsi.get(int(idx), np.zeros_like(final_state))
+            dpsi_vecs.append(vec)
+            overlaps.append(final_state.conj() @ vec)
+
+        overlaps = np.asarray(overlaps, dtype=complex)
+
+        if approx == "diag":
+            for i in range(n_gate):
+                inner = np.real(dpsi_vecs[i].conj() @ dpsi_vecs[i])
+                correction = np.real(np.abs(overlaps[i]) ** 2)
+                MT_sum[i, i] += inner - correction
+        else:
+            for i in range(n_gate):
+                for j in range(i, n_gate):
+                    inner = np.real(dpsi_vecs[i].conj() @ dpsi_vecs[j])
+                    correction = np.real(overlaps[i].conj() * overlaps[j])
+                    val = inner - correction
+                    MT_sum[i, j] += val
+                    if i != j:
+                        MT_sum[j, i] += val
+
+    MT = MT_sum / len(X)
+    MT += lam * np.eye(n_gate)
+
+    stats = {
+        "sample_forward_passes": len(X),
+        "sample_backward_passes": len(X),
+        "full_loss_evaluations": 0,
+        "gradient_evaluations": 0,
+    }
+    return MT, stats
+
+
+def train_qng(
+    model,
+    params,
+    X_train,
+    y_train,
+    X_test,
+    y_test,
+    max_iterations=200,
+    lr=0.01,
+    lam=0.01,
+    approx=None,
+):
+    """Train using Quantum Natural Gradient with full-batch BCE gradients.
+
+    The Fubini-Study metric tensor is recomputed at every iteration and
+    used to precondition the gradient of the gate (quantum) parameters.
+    Non-gate (classical) parameters receive a standard gradient-descent
+    update at the same learning rate.
+    """
+    trace = _init_trace()
+    counters = _init_counters()
+    t0 = time.time()
+
+    if hasattr(model, "gate_parameter_indices"):
+        gate_indices = np.asarray(model.gate_parameter_indices(), dtype=int)
+    else:
+        gate_indices = np.arange(len(params), dtype=int)
+
+    nongate_indices = (
+        np.asarray(model.nongate_parameter_indices(), dtype=int)
+        if hasattr(model, "nongate_parameter_indices")
+        else np.array([], dtype=int)
+    )
+
+    tl, ta, tea = _compute_metrics(
+        model, params, X_train, y_train, X_test, y_test, counters
+    )
+    _append_trace(
+        trace, counters, 0, "init", 0.0, tl, ta, tea,
+        step_size=0.0, update_norm=0.0, gradient_norm=0.0,
+        contribution_variance=np.nan,
+    )
+
+    for it in range(1, max_iterations + 1):
+        grad, grad_stats = model.loss_gradient(params, X_train, y_train)
+        _apply_counter_delta(counters, grad_stats)
+        counters["gradient_evaluations"] += 1
+
+        MT, mt_stats = _compute_metric_tensor(
+            model, params, X_train, gate_indices, approx=approx, lam=lam,
+        )
+        _apply_counter_delta(counters, mt_stats)
+
+        update = np.zeros_like(params)
+        if len(gate_indices) > 0:
+            MT_inv = np.linalg.pinv(MT)
+            update[gate_indices] = lr * (MT_inv @ grad[gate_indices])
+        if len(nongate_indices) > 0:
+            update[nongate_indices] = lr * grad[nongate_indices]
+
+        params = params - update
+
+        tl, ta, tea = _compute_metrics(
+            model, params, X_train, y_train, X_test, y_test, counters
+        )
+        _append_trace(
+            trace, counters, it, "qng", time.time() - t0, tl, ta, tea,
+            step_size=lr, update_norm=float(np.linalg.norm(update)),
+            gradient_norm=float(np.linalg.norm(grad)),
+            contribution_variance=np.nan,
+        )
+
+        if it % 20 == 0 or it == 1:
+            _print_progress(
+                "QNG", it, tl, ta, tea, lr, trace["cost_units"][-1]
+            )
+
+    return params, trace
+
+
 def run_optimizer(name, model, params, X_train, y_train, X_test, y_test, config):
     """Run a named optimizer and return ``(final_params, trace)``."""
     if name == "krotov_online":
@@ -967,6 +1218,20 @@ def run_optimizer(name, model, params, X_train, y_train, X_test, y_test, config)
             X_test,
             y_test,
             max_iterations=config.lbfgs_maxiter,
+        )
+
+    if name == "qng":
+        return train_qng(
+            model,
+            params,
+            X_train,
+            y_train,
+            X_test,
+            y_test,
+            max_iterations=config.max_iterations,
+            lr=config.qng_lr,
+            lam=config.qng_lam,
+            approx=getattr(config, "qng_approx", None),
         )
 
     raise ValueError(f"Unknown optimizer: {name}")

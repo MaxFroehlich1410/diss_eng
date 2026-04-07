@@ -20,3 +20,9 @@ experiments/hydrogen_qalchemy/API_alchemy.md
 
 # Nested external repository
 q-alchemy-sdk-py/
+
+# Generated experiment artifacts (plots/reports/data exports)
+experiments/**/*.png
+experiments/**/*.pdf
+experiments/**/*.csv
+experiments/**/*.json

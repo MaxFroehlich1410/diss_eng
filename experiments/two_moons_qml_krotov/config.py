@@ -23,6 +23,9 @@ class ExperimentConfig:
     max_iterations: int = 100
     adam_lr: float = 0.05
     lbfgs_maxiter: int = 100
+    qng_lr: float = 0.5
+    qng_lam: float = 0.01  # Fubini-Study metric tensor regularisation
+    qng_approx: Optional[str] = None  # None (full) or "diag"
     early_stopping_enabled: bool = True
     early_stopping_patience: int = 12
     early_stopping_min_delta: float = 1e-4

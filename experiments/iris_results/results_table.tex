@@ -1,0 +1,15 @@
+\begin{table}[H]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+Optimizer & Final loss & Final test acc. & Wall time (s) & Time to $\leq 0.40$ (s) & Success @ 0.40 & Tail std. \\
+\midrule
+Hybrid Krotov & 0.255 $\pm$ 0.025 & 0.980 $\pm$ 0.024 & 18.6 $\pm$ 1.1 & 0.3 & 1.00 & 0.0000 \\
+Adam & 0.273 $\pm$ 0.023 & 0.970 $\pm$ 0.024 & 17.0 $\pm$ 0.7 & 3.4 & 1.00 & 0.0017 \\
+L-BFGS-B & 0.263 $\pm$ 0.018 & 0.980 $\pm$ 0.024 & 7.4 $\pm$ 1.2 & 0.9 & 1.00 & 0.0000 \\
+QNG & 0.267 $\pm$ 0.022 & 0.970 $\pm$ 0.024 & 39.7 $\pm$ 0.3 & 2.4 & 1.00 & 0.0001 \\
+\bottomrule
+\end{tabular}}
+\caption{Iris binary classification benchmark (5 seeds, 100 iterations).}
+\end{table}
