@@ -1,0 +1,30 @@
+{
+  "krotov_hybrid": {
+    "label": "Hybrid Krotov",
+    "n_runs": 1,
+    "final_loss_mean": 0.3038620853838932,
+    "final_loss_std": 0.0,
+    "final_train_acc_mean": 0.8657142857142858,
+    "final_train_acc_std": 0.0,
+    "final_test_acc_mean": 0.8466666666666667,
+    "final_test_acc_std": 0.0,
+    "wall_time_mean": 72.11248016357422,
+    "wall_time_std": 0.0,
+    "cost_mean": 62850.0,
+    "cost_std": 0.0
+  },
+  "adam": {
+    "label": "Adam",
+    "n_runs": 1,
+    "final_loss_mean": 0.31579592755766034,
+    "final_loss_std": 0.0,
+    "final_train_acc_mean": 0.8771428571428571,
+    "final_train_acc_std": 0.0,
+    "final_test_acc_mean": 0.8466666666666667,
+    "final_test_acc_std": 0.0,
+    "wall_time_mean": 59.05423712730408,
+    "wall_time_std": 0.0,
+    "cost_mean": 62850.0,
+    "cost_std": 0.0
+  }
+}

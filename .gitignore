@@ -26,3 +26,9 @@ experiments/**/*.png
 experiments/**/*.pdf
 experiments/**/*.csv
 experiments/**/*.json
+
+# Per-experiment generated outputs
+experiments/**/results/**
+experiments/**/.cache/**
+*.bbl
+*.blg

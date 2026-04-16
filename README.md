@@ -1,90 +1,35 @@
-# Dissipative Engineering – PinexQ Circuit Builder + Qiskit Simulation
+# Krotov QML Benchmark Repository
 
-This repo is a minimal, reproducible harness to:
+This repository is organised around four main areas:
 
-- install and inspect the [`pinexq-client`](https://pypi.org/project/pinexq-client/#files) package
-- call a **PinexQ processing step** (e.g. your Tucker-tensor circuit builder) to produce a circuit
-- simulate that circuit locally using **Qiskit Aer**, and compare the output state to a chosen target state
+- `datasets/` contains reusable classification dataset loaders and synthetic task generators, including Iris, two-moons, and Perez-Salinas style problems such as `crown`.
+- `qml_models/` contains reusable QML model definitions and objective functions.
+- `optimizers/` contains reusable optimizer implementations, including the hybrid Krotov method and its baselines.
+- `experiments/` contains runnable experiment folders, each with its own `README.md`, runner script, and `results/` directory.
 
-## What `pinexq-client` is (quick analysis)
+## Main Experiments
 
-`pinexq-client` is **not** a local circuit-synthesis library. It is a hypermedia client for the **PinexQ platform**
-that lets you run *server-side processing steps* by name (think “remote functions”) via jobs:
+- `experiments/two_moons_baseline/`: baseline two-moons benchmark.
+- `experiments/two_moons_optimizer_sweeps/`: optimizer hyperparameter sweeps on two-moons variants.
+- `experiments/two_moons_hybrid_sweep/`: hybrid Krotov schedule sweep.
+- `experiments/two_moons_scaling_sweep/`: Krotov scaling experiments.
+- `experiments/two_moons_alternative_models/`: alternative QML model benchmarks.
+- `experiments/two_moons_perez_salinas_benchmark/`: Perez-Salinas style data-reuploading benchmark.
+- `experiments/two_moons_perez_salinas_sweep/`: Perez-Salinas sweep experiments.
+- `experiments/two_moons_readout_heads_hea/`, `two_moons_readout_heads_chen/`, `two_moons_readout_heads_simonetti/`, `two_moons_readout_heads_hea_two_moons/`: readout-head comparisons.
+- `experiments/two_moons_dense_angle/`: dense-angle circuit benchmark.
+- `experiments/two_moons_krotov_variants/`: Krotov variant comparison.
+- `experiments/iris_hea/`: Iris HEA benchmark.
+- `experiments/vqe_hubbard_1x2/`: exact-statevector 1x2 Fermi-Hubbard VQE sweeps.
 
-- create a job
-- select a processing step (`function_name`, optional version)
-- pass JSON parameters (and/or input workdata)
-- wait for completion
-- read the JSON result and/or download output workdata blobs
+Generated outputs live under each experiment's `results/` directory and are ignored by git.
 
-## Setup
-
-Create and activate a Python 3.11 virtualenv, then install:
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-```
-
-## PinexQ credentials (online mode)
-
-To actually call your Tucker circuit builder, you need:
-
-- `PINEXQ_API_ENDPOINT` (base URL of your PinexQ Job Management API)
-- `PINEXQ_API_KEY` (sent as `x-api-key`)
-
-Example:
+## Install
 
 ```bash
-export PINEXQ_API_ENDPOINT="https://myapihost.com:80"
-export PINEXQ_API_KEY="...secret..."
+pip install -r requirements.txt
 ```
 
-## Discover the circuit builder step
+## Notes
 
-List available processing steps:
-
-```bash
-python pinexq_qiskit_demo.py --list-processing-steps
-```
-
-Describe a specific step (prints parameter/return schemas, data slot specs, tags, etc.):
-
-```bash
-python pinexq_qiskit_demo.py --describe-processing-step "<FUNCTION_NAME>"
-```
-
-## Build + simulate (online mode)
-
-Run a processing step and simulate the returned circuit:
-
-```bash
-python pinexq_qiskit_demo.py \
-  --processing-step "<YOUR_TUCKER_CIRCUIT_BUILDER_FUNCTION_NAME>" \
-  --n-qubits 3 \
-  --target ghz \
-  --print-qc
-```
-
-If your processing step requires a custom parameter schema, pass parameters directly as JSON:
-
-```bash
-python pinexq_qiskit_demo.py \
-  --processing-step "<YOUR_STEP>" \
-  --params-json '{"someKey": 123, "someOtherKey": "abc"}'
-```
-
-The script will try to extract a circuit from either:
-
-- `job.get_result()` (JSON result containing a QASM string somewhere), or
-- output workdata files attached to the job (downloaded and heuristically parsed as OpenQASM)
-
-## Offline fallback (no PinexQ)
-
-This produces a state-preparation circuit locally (Qiskit `initialize`) and simulates it:
-
-```bash
-python pinexq_qiskit_demo.py --offline --n-qubits 3 --target ghz --print-qc
-```
-
+The manuscript source files currently remain under `experiments/krotov_paper/` as archival material.

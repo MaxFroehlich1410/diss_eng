@@ -1,0 +1,16 @@
+{
+  "adam": {
+    "label": "Adam",
+    "n_runs": 1,
+    "final_loss_mean": 0.5993786607943736,
+    "final_loss_std": 0.0,
+    "final_train_acc_mean": 0.7285714285714285,
+    "final_train_acc_std": 0.0,
+    "final_test_acc_mean": 0.7133333333333334,
+    "final_test_acc_std": 0.0,
+    "wall_time_mean": 0.8107631206512451,
+    "wall_time_std": 0.0,
+    "cost_mean": 2400.0,
+    "cost_std": 0.0
+  }
+}

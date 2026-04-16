@@ -1,0 +1,30 @@
+{
+  "adam": {
+    "label": "Adam",
+    "n_runs": 1,
+    "final_loss_mean": 1.9397584606842129,
+    "final_loss_std": 0.0,
+    "final_train_acc_mean": 0.5,
+    "final_train_acc_std": 0.0,
+    "final_test_acc_mean": 0.5,
+    "final_test_acc_std": 0.0,
+    "wall_time_mean": 0.5795178413391113,
+    "wall_time_std": 0.0,
+    "cost_mean": 500.0,
+    "cost_std": 0.0
+  },
+  "lbfgs": {
+    "label": "L-BFGS-B",
+    "n_runs": 1,
+    "final_loss_mean": 7.436053471931714e-11,
+    "final_loss_std": 0.0,
+    "final_train_acc_mean": 1.0,
+    "final_train_acc_std": 0.0,
+    "final_test_acc_mean": 1.0,
+    "final_test_acc_std": 0.0,
+    "wall_time_mean": 7.849194049835205,
+    "wall_time_std": 0.0,
+    "cost_mean": 5792.0,
+    "cost_std": 0.0
+  }
+}
