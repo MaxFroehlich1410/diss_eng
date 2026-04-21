@@ -4,6 +4,7 @@ from .vqc import VQCModel
 from .variants import (
     ChenSUNVQCModel,
     ParityRotClassifierModel,
+    PennyLanePerezSalinasReuploadingModel,
     PerezSalinasReuploadingModel,
     ProjectedTrainableModel,
     SimonettiHybridModel,
@@ -14,6 +15,7 @@ __all__ = [
     "VQCModel",
     "ChenSUNVQCModel",
     "ParityRotClassifierModel",
+    "PennyLanePerezSalinasReuploadingModel",
     "PerezSalinasReuploadingModel",
     "ProjectedTrainableModel",
     "SimonettiHybridModel",

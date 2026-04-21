@@ -788,6 +788,7 @@ def train_lbfgs(model, params, X_train, y_train, X_test, y_test, max_iterations=
     counters = _init_counters()
     step_counter = [0]
     previous_point = [params.copy()]
+    latest_grad_norm = [0.0]
     t0 = time.time()
 
     tl, ta, tea = _compute_metrics(model, params, X_train, y_train, X_test, y_test, counters)
@@ -819,40 +820,39 @@ def train_lbfgs(model, params, X_train, y_train, X_test, y_test, max_iterations=
         grad, grad_stats = model.loss_gradient(p, X_train, y_train)
         _apply_counter_delta(counters, grad_stats)
         counters["gradient_evaluations"] += 1
+        latest_grad_norm[0] = float(np.linalg.norm(grad))
 
+        return loss, grad
+
+    def callback(xk):
         step_counter[0] += 1
-        ta = model.accuracy(p, X_train, y_train)
-        _apply_counter_delta(counters, {"sample_forward_passes": len(X_train)})
-        tea = model.accuracy(p, X_test, y_test)
-        _apply_counter_delta(counters, {"sample_forward_passes": len(X_test)})
-
-        update_norm = float(np.linalg.norm(p - previous_point[0]))
-        previous_point[0] = p.copy()
+        tl, ta, tea = _compute_metrics(model, xk, X_train, y_train, X_test, y_test, counters)
+        update_norm = float(np.linalg.norm(xk - previous_point[0]))
+        previous_point[0] = xk.copy()
         _append_trace(
             trace,
             counters,
             step_counter[0],
             "lbfgs",
             time.time() - t0,
-            loss,
+            tl,
             ta,
             tea,
             step_size=np.nan,
             update_norm=update_norm,
-            gradient_norm=float(np.linalg.norm(grad)),
+            gradient_norm=latest_grad_norm[0],
             contribution_variance=np.nan,
         )
 
         if step_counter[0] % 20 == 0 or step_counter[0] == 1:
-            _print_progress("L-BFGS-B", step_counter[0], loss, ta, tea, np.nan, trace["cost_units"][-1])
-
-        return loss, grad
+            _print_progress("L-BFGS-B", step_counter[0], tl, ta, tea, np.nan, trace["cost_units"][-1])
 
     result = minimize(
         objective_and_grad,
         params,
         method="L-BFGS-B",
         jac=True,
+        callback=callback,
         options={
             "maxiter": max_iterations,
             "maxfun": max_iterations * 20,
